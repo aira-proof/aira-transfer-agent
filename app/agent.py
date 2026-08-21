@@ -1,11 +1,14 @@
 from __future__ import annotations
 
+import logging
 import os
 from datetime import datetime, timezone
 
 from aira import Aira, AiraError
 
 from .models import Transfer, TransferRequest, TransferStatus
+
+log = logging.getLogger(__name__)
 
 AGENT_ID = "wire-transfer-agent"
 AGENT_VERSION = "1.0.0"
@@ -82,18 +85,16 @@ def process_transfer(req: TransferRequest) -> Transfer:
         receipt = aira.notarize(
             action_uuid=auth.action_uuid,
             outcome="completed",
-            outcome_details=(
-                f"Wire transfer executed: {req.amount_eur:,.2f} {req.currency} "
-                f"to {req.recipient} ({req.iban}), country={req.country}"
-            ),
+            outcome_details="Wire transfer executed successfully.",
         )
         transfer.receipt_uuid = receipt.receipt_uuid
         transfer.signature = receipt.signature
         transfer.verify_url = (
             f"https://airaproof.com/verify/{auth.action_uuid}"
         )
-    except AiraError:
-        transfer.agent_reasoning += " (notarization failed — receipt unavailable)"
+    except Exception as e:
+        log.exception("Notarization failed for %s", auth.action_uuid)
+        transfer.agent_reasoning += f" (notarization failed: {e})"
 
     _transfers.insert(0, transfer)
     return transfer
