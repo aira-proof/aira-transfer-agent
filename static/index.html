@@ -1,0 +1,683 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Aira Transfer Agent — Governed Wire Transfers</title>
+<style>
+  :root {
+    --bg: #0c0c0f;
+    --surface: #141419;
+    --border: #23232b;
+    --fg: #e4e4e7;
+    --mute: #71717a;
+    --accent: #22d3ee;
+    --green: #34d399;
+    --red: #f87171;
+    --amber: #fbbf24;
+    --mono: 'SF Mono', 'Cascadia Code', 'Fira Code', 'JetBrains Mono', monospace;
+    --sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  }
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: var(--sans);
+    background: var(--bg);
+    color: var(--fg);
+    line-height: 1.5;
+    min-height: 100vh;
+  }
+  .container { max-width: 960px; margin: 0 auto; padding: 0 24px; }
+
+  /* Nav */
+  nav {
+    border-bottom: 1px solid var(--border);
+    padding: 16px 0;
+  }
+  nav .inner {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .logo {
+    font-family: var(--mono);
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--fg);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    text-decoration: none;
+  }
+  .logo .dot {
+    width: 8px; height: 8px;
+    background: var(--accent);
+    animation: pulse 2s ease-in-out infinite;
+  }
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.4; }
+  }
+  .badge {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--mute);
+    border: 1px solid var(--border);
+    padding: 4px 10px;
+    border-radius: 20px;
+  }
+
+  /* Layout */
+  .grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 24px;
+    margin-top: 32px;
+  }
+  @media (max-width: 720px) {
+    .grid { grid-template-columns: 1fr; }
+  }
+
+  /* Panels */
+  .panel {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    overflow: hidden;
+  }
+  .panel-header {
+    padding: 14px 20px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .panel-header h2 {
+    font-family: var(--mono);
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--mute);
+  }
+  .panel-body { padding: 20px; }
+
+  /* Form */
+  .form-group { margin-bottom: 16px; }
+  .form-group:last-child { margin-bottom: 0; }
+  label {
+    display: block;
+    font-family: var(--mono);
+    font-size: 11px;
+    font-weight: 500;
+    color: var(--mute);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    margin-bottom: 6px;
+  }
+  input, select {
+    width: 100%;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    color: var(--fg);
+    font-family: var(--mono);
+    font-size: 13px;
+    padding: 10px 12px;
+    border-radius: 6px;
+    outline: none;
+    transition: border-color 0.15s;
+  }
+  input:focus, select:focus {
+    border-color: var(--accent);
+  }
+  input::placeholder { color: var(--mute); opacity: 0.5; }
+  .row { display: flex; gap: 12px; }
+  .row > * { flex: 1; }
+  textarea {
+    width: 100%;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    color: var(--fg);
+    font-family: var(--mono);
+    font-size: 13px;
+    padding: 10px 12px;
+    border-radius: 6px;
+    outline: none;
+    resize: vertical;
+    min-height: 60px;
+    transition: border-color 0.15s;
+  }
+  textarea:focus { border-color: var(--accent); }
+
+  /* Submit */
+  .btn-submit {
+    width: 100%;
+    margin-top: 20px;
+    padding: 12px;
+    background: var(--accent);
+    color: #000;
+    font-family: var(--mono);
+    font-size: 13px;
+    font-weight: 600;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: opacity 0.15s;
+    letter-spacing: 0.02em;
+  }
+  .btn-submit:hover { opacity: 0.85; }
+  .btn-submit:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+  }
+
+  /* Feed */
+  .feed { display: flex; flex-direction: column; gap: 1px; }
+  .feed-empty {
+    padding: 40px 20px;
+    text-align: center;
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--mute);
+  }
+  .feed-item {
+    padding: 14px 20px;
+    border-bottom: 1px solid var(--border);
+    cursor: pointer;
+    transition: background 0.1s;
+  }
+  .feed-item:last-child { border-bottom: none; }
+  .feed-item:hover { background: rgba(255,255,255,0.02); }
+  .feed-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 4px;
+  }
+  .feed-recipient {
+    font-size: 14px;
+    font-weight: 500;
+  }
+  .feed-amount {
+    font-family: var(--mono);
+    font-size: 14px;
+    font-weight: 600;
+  }
+  .feed-bottom {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .feed-purpose {
+    font-size: 12px;
+    color: var(--mute);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 200px;
+  }
+  .status {
+    font-family: var(--mono);
+    font-size: 10px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    padding: 3px 8px;
+    border-radius: 4px;
+  }
+  .status-executed { background: rgba(52,211,153,0.12); color: var(--green); }
+  .status-denied { background: rgba(248,113,113,0.12); color: var(--red); }
+  .status-pending_approval { background: rgba(251,191,36,0.12); color: var(--amber); }
+  .status-authorized { background: rgba(34,211,238,0.12); color: var(--accent); }
+  .status-failed { background: rgba(248,113,113,0.12); color: var(--red); }
+
+  /* Detail modal */
+  .overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.6);
+    backdrop-filter: blur(4px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 100;
+    padding: 24px;
+  }
+  .overlay.hidden { display: none; }
+  .detail-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    max-width: 520px;
+    width: 100%;
+    max-height: 80vh;
+    overflow-y: auto;
+  }
+  .detail-header {
+    padding: 20px 24px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .detail-header h3 {
+    font-size: 16px;
+    font-weight: 600;
+  }
+  .btn-close {
+    background: none;
+    border: none;
+    color: var(--mute);
+    font-size: 20px;
+    cursor: pointer;
+    padding: 4px 8px;
+    line-height: 1;
+  }
+  .btn-close:hover { color: var(--fg); }
+  .detail-body { padding: 24px; }
+  .detail-row {
+    display: flex;
+    justify-content: space-between;
+    padding: 8px 0;
+    border-bottom: 1px solid var(--border);
+    font-size: 13px;
+  }
+  .detail-row:last-child { border-bottom: none; }
+  .detail-label {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--mute);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+  .detail-value {
+    font-family: var(--mono);
+    font-size: 13px;
+    text-align: right;
+    word-break: break-all;
+    max-width: 280px;
+  }
+  .detail-section {
+    margin-top: 16px;
+    padding-top: 16px;
+    border-top: 1px solid var(--border);
+  }
+  .detail-section h4 {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--mute);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    margin-bottom: 12px;
+  }
+  .sig-box {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 12px;
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--accent);
+    word-break: break-all;
+    line-height: 1.6;
+  }
+  .verify-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    margin-top: 12px;
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--accent);
+    text-decoration: none;
+  }
+  .verify-link:hover { text-decoration: underline; }
+
+  /* Reasoning */
+  .reasoning {
+    margin-top: 12px;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 12px;
+    font-size: 13px;
+    color: var(--fg);
+    line-height: 1.5;
+  }
+
+  /* Presets */
+  .presets {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+    margin-bottom: 20px;
+  }
+  .preset-btn {
+    font-family: var(--mono);
+    font-size: 11px;
+    padding: 6px 10px;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    color: var(--mute);
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .preset-btn:hover {
+    border-color: var(--accent);
+    color: var(--fg);
+  }
+
+  /* Footer */
+  footer {
+    border-top: 1px solid var(--border);
+    margin-top: 48px;
+    padding: 20px 0;
+    text-align: center;
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--mute);
+  }
+  footer a { color: var(--accent); text-decoration: none; }
+  footer a:hover { text-decoration: underline; }
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="container inner">
+    <a href="/" class="logo">
+      <span class="dot"></span>
+      aira<span style="color:var(--mute)">_</span>transfer-agent
+    </a>
+    <span class="badge">demo &middot; governed by aira</span>
+  </div>
+</nav>
+
+<div class="container">
+  <div class="grid">
+
+    <!-- Left: Submit -->
+    <div>
+      <div class="panel">
+        <div class="panel-header">
+          <h2>New Wire Transfer</h2>
+        </div>
+        <div class="panel-body">
+          <div class="presets">
+            <button class="preset-btn" onclick="fillPreset('small')">Small (&#8364;500)</button>
+            <button class="preset-btn" onclick="fillPreset('medium')">Medium (&#8364;25K)</button>
+            <button class="preset-btn" onclick="fillPreset('large')">Large (&#8364;250K)</button>
+            <button class="preset-btn" onclick="fillPreset('sanctioned')">Sanctioned country</button>
+          </div>
+
+          <form id="transferForm" onsubmit="submitTransfer(event)">
+            <div class="form-group">
+              <label>Recipient</label>
+              <input type="text" id="recipient" placeholder="Acme GmbH" required />
+            </div>
+            <div class="form-group">
+              <label>IBAN</label>
+              <input type="text" id="iban" placeholder="DE89370400440532013000" required />
+            </div>
+            <div class="row">
+              <div class="form-group">
+                <label>Amount (EUR)</label>
+                <input type="number" id="amount" placeholder="1000.00" step="0.01" min="0.01" required />
+              </div>
+              <div class="form-group">
+                <label>Country</label>
+                <select id="country" required>
+                  <option value="DE">DE</option>
+                  <option value="NL">NL</option>
+                  <option value="FR">FR</option>
+                  <option value="ES">ES</option>
+                  <option value="IT">IT</option>
+                  <option value="GB">GB</option>
+                  <option value="US">US</option>
+                  <option value="CH">CH</option>
+                  <option value="RU">RU</option>
+                  <option value="KP">KP</option>
+                  <option value="IR">IR</option>
+                </select>
+              </div>
+            </div>
+            <div class="form-group">
+              <label>Purpose</label>
+              <textarea id="purpose" placeholder="Invoice payment for Q3 consulting services" required></textarea>
+            </div>
+            <button type="submit" class="btn-submit" id="submitBtn">
+              Submit for governance review
+            </button>
+          </form>
+        </div>
+      </div>
+    </div>
+
+    <!-- Right: Feed -->
+    <div>
+      <div class="panel">
+        <div class="panel-header">
+          <h2>Transfer decisions</h2>
+        </div>
+        <div id="feed" class="feed">
+          <div class="feed-empty">
+            No transfers yet. Submit one to see Aira in action.
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- Detail overlay -->
+<div class="overlay hidden" id="overlay" onclick="closeDetail(event)">
+  <div class="detail-card" onclick="event.stopPropagation()">
+    <div class="detail-header">
+      <h3 id="detailTitle">Transfer Details</h3>
+      <button class="btn-close" onclick="document.getElementById('overlay').classList.add('hidden')">&times;</button>
+    </div>
+    <div class="detail-body" id="detailBody"></div>
+  </div>
+</div>
+
+<footer>
+  <div class="container">
+    Governed by <a href="https://airaproof.com" target="_blank">Aira</a> &mdash;
+    authorization &amp; audit for AI agents &middot;
+    <a href="https://docs.airaproof.com" target="_blank">Docs</a> &middot;
+    <a href="https://github.com/aira-proof" target="_blank">GitHub</a>
+  </div>
+</footer>
+
+<script>
+const presets = {
+  small: {
+    recipient: 'Acme GmbH',
+    iban: 'DE89370400440532013000',
+    amount: 500,
+    country: 'DE',
+    purpose: 'Invoice #2026-0847 — office supplies',
+  },
+  medium: {
+    recipient: 'CloudScale BV',
+    iban: 'NL91ABNA0417164300',
+    amount: 25000,
+    country: 'NL',
+    purpose: 'Q3 2026 infrastructure hosting — annual contract renewal',
+  },
+  large: {
+    recipient: 'Meridian Capital Partners',
+    iban: 'GB29NWBK60161331926819',
+    amount: 250000,
+    country: 'GB',
+    purpose: 'Series B bridge loan repayment — tranche 2 of 4',
+  },
+  sanctioned: {
+    recipient: 'Import Corp',
+    iban: 'RU0204452560040702810412345',
+    amount: 8500,
+    country: 'RU',
+    purpose: 'Machinery parts — purchase order PO-2026-312',
+  },
+};
+
+function fillPreset(key) {
+  const p = presets[key];
+  document.getElementById('recipient').value = p.recipient;
+  document.getElementById('iban').value = p.iban;
+  document.getElementById('amount').value = p.amount;
+  document.getElementById('country').value = p.country;
+  document.getElementById('purpose').value = p.purpose;
+}
+
+async function submitTransfer(e) {
+  e.preventDefault();
+  const btn = document.getElementById('submitBtn');
+  btn.disabled = true;
+  btn.textContent = 'Processing...';
+
+  const body = {
+    recipient: document.getElementById('recipient').value,
+    iban: document.getElementById('iban').value,
+    amount_eur: parseFloat(document.getElementById('amount').value),
+    country: document.getElementById('country').value,
+    purpose: document.getElementById('purpose').value,
+  };
+
+  try {
+    const res = await fetch('/api/transfers', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    });
+    if (!res.ok) {
+      const err = await res.json();
+      alert('Error: ' + (err.detail || 'Unknown error'));
+      return;
+    }
+    await refreshFeed();
+    document.getElementById('transferForm').reset();
+  } catch (err) {
+    alert('Network error: ' + err.message);
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Submit for governance review';
+  }
+}
+
+async function refreshFeed() {
+  const res = await fetch('/api/transfers');
+  const transfers = await res.json();
+  const feed = document.getElementById('feed');
+
+  if (transfers.length === 0) {
+    feed.innerHTML = '<div class="feed-empty">No transfers yet. Submit one to see Aira in action.</div>';
+    return;
+  }
+
+  feed.innerHTML = transfers.map(t => `
+    <div class="feed-item" onclick='showDetail(${JSON.stringify(t).replace(/'/g, "&#39;")})'>
+      <div class="feed-top">
+        <span class="feed-recipient">${esc(t.request.recipient)}</span>
+        <span class="feed-amount">&euro;${Number(t.request.amount_eur).toLocaleString('de-DE', {minimumFractionDigits: 2})}</span>
+      </div>
+      <div class="feed-bottom">
+        <span class="feed-purpose">${esc(t.request.purpose)}</span>
+        <span class="status status-${t.status}">${t.status.replace('_', ' ')}</span>
+      </div>
+    </div>
+  `).join('');
+}
+
+function showDetail(t) {
+  const body = document.getElementById('detailBody');
+  document.getElementById('detailTitle').textContent = t.request.recipient;
+
+  let html = `
+    <div class="detail-row">
+      <span class="detail-label">Status</span>
+      <span class="status status-${t.status}">${t.status.replace('_', ' ')}</span>
+    </div>
+    <div class="detail-row">
+      <span class="detail-label">Amount</span>
+      <span class="detail-value">&euro;${Number(t.request.amount_eur).toLocaleString('de-DE', {minimumFractionDigits: 2})} ${t.request.currency}</span>
+    </div>
+    <div class="detail-row">
+      <span class="detail-label">IBAN</span>
+      <span class="detail-value">${esc(t.request.iban)}</span>
+    </div>
+    <div class="detail-row">
+      <span class="detail-label">Country</span>
+      <span class="detail-value">${esc(t.request.country)}</span>
+    </div>
+    <div class="detail-row">
+      <span class="detail-label">Purpose</span>
+      <span class="detail-value">${esc(t.request.purpose)}</span>
+    </div>
+    <div class="detail-row">
+      <span class="detail-label">Created</span>
+      <span class="detail-value">${new Date(t.created_at).toLocaleString()}</span>
+    </div>
+  `;
+
+  if (t.action_uuid) {
+    html += `
+    <div class="detail-row">
+      <span class="detail-label">Action UUID</span>
+      <span class="detail-value" style="font-size:11px">${esc(t.action_uuid)}</span>
+    </div>`;
+  }
+
+  if (t.agent_reasoning) {
+    html += `<div class="reasoning">${esc(t.agent_reasoning)}</div>`;
+  }
+
+  if (t.denial_reason) {
+    html += `<div class="reasoning" style="border-color:var(--red);color:var(--red)">${esc(t.denial_reason)}</div>`;
+  }
+
+  if (t.signature) {
+    html += `
+    <div class="detail-section">
+      <h4>Cryptographic Receipt</h4>
+      <div class="sig-box">${esc(t.signature)}</div>
+      ${t.verify_url ? `<a href="${esc(t.verify_url)}" target="_blank" class="verify-link">Verify independently &rarr;</a>` : ''}
+    </div>`;
+  }
+
+  if (t.receipt_uuid) {
+    html += `
+    <div class="detail-row">
+      <span class="detail-label">Receipt UUID</span>
+      <span class="detail-value" style="font-size:11px">${esc(t.receipt_uuid)}</span>
+    </div>`;
+  }
+
+  body.innerHTML = html;
+  document.getElementById('overlay').classList.remove('hidden');
+}
+
+function closeDetail(e) {
+  if (e.target === e.currentTarget) {
+    document.getElementById('overlay').classList.add('hidden');
+  }
+}
+
+function esc(s) {
+  if (!s) return '';
+  const d = document.createElement('div');
+  d.textContent = String(s);
+  return d.innerHTML;
+}
+
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') {
+    document.getElementById('overlay').classList.add('hidden');
+  }
+});
+
+refreshFeed();
+</script>
+</body>
+</html>
